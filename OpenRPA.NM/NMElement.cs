@@ -180,8 +180,10 @@ namespace OpenRPA.NM
                 {
                     if (Attributes.ContainsKey("text")) return Attributes["text"].ToString();
                     if (Attributes.ContainsKey("innertext")) return Attributes["innertext"].ToString();
+                    if (Attributes.ContainsKey("textcontent")) return Attributes["textcontent"].ToString();
                 }
                 if (Attributes.ContainsKey("text")) return Attributes["text"].ToString();
+                if (Attributes.ContainsKey("textcontent")) return Attributes["textcontent"].ToString();
                 if (Attributes.ContainsKey("innertext"))
                 {
                     var text = Attributes["innertext"].ToString();
@@ -197,6 +199,7 @@ namespace OpenRPA.NM
                     Refresh();
                     if (Attributes.ContainsKey("text")) return Attributes["text"].ToString();
                     if (Attributes.ContainsKey("innertext")) return Attributes["innertext"].ToString();
+                    if (Attributes.ContainsKey("textcontent")) return Attributes["textcontent"].ToString();
                 }
                 return null;
             }
