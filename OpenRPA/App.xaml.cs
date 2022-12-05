@@ -1,13 +1,17 @@
 ﻿using OpenRPA.Interfaces;
+using OpenRPA.Interfaces.IPCService;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -51,12 +55,99 @@ namespace OpenRPA
                 }
                 var application = new App();
                 application.InitializeComponent();
+                proto3.IPCServer.onAwesomeMessage += IPCServer_onAwesomeMessage;
+                proto3.IPCServer.Start();
                 application.Run();
                 // application.Run();
                 // Allow single instance code to perform cleanup operations
                 SingleInstance<App>.Cleanup();
             }
         }
+
+        private static FileStream fs = null;
+        private static int fscounter = 0;
+        private static void IPCServer_onAwesomeMessage(proto3.AwesomeMessage obj)
+        {
+            string s = "";
+            try
+            {
+                if(obj.data != null)
+                {
+                    // Console.WriteLine(obj.command + " " + s);
+                    if (obj.command == "send100")
+                    {
+                        for (var i = 0; i < 100; i++)
+                        {
+                            obj.data = Encoding.UTF8.GetBytes("test" + (i + 1));
+                            proto3.IPCServer.Send(obj);
+                        }
+                    }
+                    else if (obj.command == "send1000")
+                    {
+                        for (var i = 0; i < 1000; i++)
+                        {
+                            obj.data = Encoding.UTF8.GetBytes("test" + (i + 1));
+                            proto3.IPCServer.Send(obj);
+                        }
+                    }
+                    else if (obj.command == "startfile")
+                    {
+                        s = Encoding.UTF8.GetString(obj.data); // filename
+                        fs = File.OpenWrite(@"c:\tmp\" + s);
+                        fscounter = 0;
+                    }
+                    else if (obj.command == "file" && fs != null)
+                    {
+                        fscounter++;
+                        fs.Write(obj.data, 0, obj.data.Length);
+                        // fs.Flush();
+                        s = fscounter.ToString();
+                    }
+                    else if (obj.command == "endfile")
+                    {
+                        s = Encoding.UTF8.GetString(obj.data); // filename
+                        if (fs != null)
+                        {
+                            fs.Flush();
+                            fs.Close();
+                            fs.Dispose();
+                            fs = null;
+                        }
+                    }
+                    else
+                    {
+                        // string s = "Say what? Özel Koleksiyon";
+                        s = Encoding.UTF8.GetString(obj.data);
+                        if(string.IsNullOrEmpty(s))
+                        {
+                            s = "Say what? Özel Koleksiyon";
+                        } 
+                        else
+                        {
+                            s = "Did you say " + s + " ?";
+                        }
+                        
+                    }
+
+                }
+                else
+                {
+                    // Console.WriteLine(obj.command + " null");
+                }
+            }
+            catch (Exception)
+            {
+            }
+            //if(string.IsNullOrEmpty(s))
+            //{
+            //    obj.data = new byte[] { };
+            //} else
+            //{
+            //    obj.data = Encoding.UTF8.GetBytes(s);
+            //}
+            //proto3.IPCServer.Send(obj);
+        }
+
         static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs args)
         {
             Log.Function("MainWindow", "CurrentDomain_UnhandledException");
@@ -145,17 +236,17 @@ namespace OpenRPA
             }
             try
             {
-                if (args.Name.StartsWith("CefSharp"))
-                {
-                    string assemblyName = args.Name.Split(new[] { ',' }, 2)[0] + ".dll";
-                    string archSpecificPath = System.IO.Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase,
-                                                           Environment.Is64BitProcess ? "x64" : "x86",
-                                                           assemblyName);
+                //if (args.Name.StartsWith("CefSharp"))
+                //{
+                //    string assemblyName = args.Name.Split(new[] { ',' }, 2)[0] + ".dll";
+                //    string archSpecificPath = System.IO.Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase,
+                //                                           Environment.Is64BitProcess ? "x64" : "x86",
+                //                                           assemblyName);
 
-                    return File.Exists(archSpecificPath)
-                               ? Assembly.LoadFile(archSpecificPath)
-                               : null;
-                }
+                //    return File.Exists(archSpecificPath)
+                //               ? Assembly.LoadFile(archSpecificPath)
+                //               : null;
+                //}
                 string folderPath = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 assemblyPath = System.IO.Path.Combine(folderPath, new AssemblyName(args.Name).Name + ".dll");
                 if (System.IO.File.Exists(assemblyPath)) return Assembly.LoadFrom(assemblyPath);
@@ -171,6 +262,22 @@ namespace OpenRPA
                 folderPath = System.IO.Path.GetTempPath();
                 assemblyPath = System.IO.Path.Combine(folderPath, new AssemblyName(args.Name).Name + ".dll");
                 if (System.IO.File.Exists(assemblyPath)) return Assembly.LoadFrom(assemblyPath);
+
+
+
+                var extensions = System.IO.Path.Combine(Interfaces.Extensions.ProjectsDirectory, "extensions");
+                if (System.IO.Directory.Exists(extensions))
+                {
+                    string name = new Regex(",.*").Replace(args.Name, string.Empty);
+                    folderPath = extensions;
+                    assemblyPath = System.IO.Path.Combine(folderPath, new AssemblyName(name).Name + ".dll");
+                    if (System.IO.File.Exists(assemblyPath)) return Assembly.LoadFrom(assemblyPath);
+                }
+
+                //// Aseembly name excluding version and other metadata
+                //string name = new Regex(",.*").Replace(args.Name, string.Empty);
+                //// Load whatever version available
+                //return Assembly.Load(name);
             }
             catch (Exception ex)
             {
