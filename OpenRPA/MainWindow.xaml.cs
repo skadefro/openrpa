@@ -598,6 +598,7 @@ namespace OpenRPA
             set
             {
                 Config.local.minimize = value;
+                Config.Save();
                 NotifyPropertyChanged("Minimize");
             }
         }
@@ -1607,6 +1608,7 @@ namespace OpenRPA
         }
         private bool CanVisualTracking(object _item)
         {
+            if (Designer == null) return false;
             return true;
         }
         private void OnVisualTracking(object _item)
@@ -1620,6 +1622,7 @@ namespace OpenRPA
         }
         private bool CanSlowMotion(object _item)
         {
+            if (Designer == null) return false;
             return true;
         }
         private void OnSlowMotion(object _item)
