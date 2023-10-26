@@ -39,6 +39,8 @@ namespace OpenRPA.Script.Activities
         public string[] namespaces { get; set; }
         public static RunspacePool pool { get; set; } = null;
         public static Runspace runspace = null;
+        [Browsable(false)]
+        public Dictionary<string, Argument> Arguments { get; set; } = new Dictionary<string, Argument>();
         public static void ExecuteNewAppDomain(Action action)
         {
             AppDomain domain = null;
